@@ -1,2 +1,5 @@
 # one
-One - a customizable homepage generator.
+
+A hybrid customizable blog platform.
+
+

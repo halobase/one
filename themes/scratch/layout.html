@@ -1,0 +1,14 @@
+{{ define "layout" }}
+<!DOCTYPE html>
+<html lang="en">
+{{ partial "widgets/head.html" . }}
+<body>
+  {{ template "page" . }}
+</body>
+{{ range .Site.Scripts }}
+{{ if . }}
+<script src="{{ . }}"></script>
+{{ end }}
+{{ end }}
+</html>
+{{ end }}
