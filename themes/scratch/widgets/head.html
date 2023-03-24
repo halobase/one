@@ -3,9 +3,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ .Site.Metadata.name }}</title>
-  {{ range .Site.Styles }}
-  {{ if . }}
+  {{ with .Site.Style }}
   <link rel="stylesheet" href="{{ . }}">
-  {{ end }}
   {{ end }}
 </head>

@@ -5,10 +5,8 @@
 <body>
   {{ template "page" . }}
 </body>
-{{ range .Site.Scripts }}
-{{ if . }}
+{{ with .Site.Script }}
 <script src="{{ . }}"></script>
-{{ end }}
 {{ end }}
 </html>
 {{ end }}

@@ -1,0 +1,40 @@
+{{ define "layout" }}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Site.Metadata.name }}</title>
+    {{ with .Site.Style }}
+    <link rel="stylesheet" href="{{ . }}">
+    {{ end }}
+  </head>
+<body>
+  <main>
+    <div>
+      <h1>{{ .Site.Metadata.banner }}</h1>
+      {{ .HTML }}
+    </div>
+    <aside>
+      {{ range .Site.Metadata.projects }}
+      <div class="card">
+        <div>
+          <a href="{{ .repo }}" target="_blank" rel="noopener noreferrer">{{ .name }}</a>
+        </div>
+        <p>{{ .about }}</p>
+        <p>
+          {{ range .tags }}
+          <span>#{{ . }}</span>
+          {{ end }}
+        </p>
+      </div>
+      {{ end }}
+    </aside>
+  </main>
+</body>
+{{ with .Site.Script }}
+<script src="{{ . }}"></script>
+{{ end }}
+</html>
+{{ end }}

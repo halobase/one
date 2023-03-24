@@ -3,7 +3,6 @@ package one
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"html/template"
 	"io"
@@ -16,7 +15,27 @@ import (
 
 	"github.com/evanw/esbuild/pkg/api"
 	"github.com/russross/blackfriday/v2"
+	"gopkg.in/yaml.v3"
 )
+
+const (
+	defaultSourceDir = "docs"
+	defaultOutputDir = "dist"
+
+	defaultThemeDir       = "themes"
+	defaultTemplateFeed   = "atom.xml"
+	defaultTemplateLayout = "layout.html"
+	defaultTemplatePost   = "post.html"
+	defaultTemplateList   = "list.html"
+	defaultTemplateIndex  = "index.html"
+	defaultAssetStyle     = "index.css"
+	defaultAssetScript    = "index.ts"
+)
+
+var defaultTemplates = map[string]Template{
+	"index.md":  {defaultTemplateIndex, false},
+	"README.md": {defaultTemplateIndex, false},
+}
 
 type One struct {
 	http.Handler
@@ -26,22 +45,32 @@ type One struct {
 	entries map[string][]*Post
 }
 
-func (o One) Load(r io.Reader) error {
-	dec := json.NewDecoder(r)
+func (o *One) Load(r io.Reader) error {
+	dec := yaml.NewDecoder(r)
 	return dec.Decode(&o.site.Metadata)
 }
 
-func (o One) Dump(w io.Writer) error {
-	enc := json.NewEncoder(w)
+func (o *One) Dump(w io.Writer) error {
+	enc := yaml.NewEncoder(w)
 	return enc.Encode(&o.site.Metadata)
 }
 
 func (o *One) Bundle(ctx context.Context) error {
-	log.Printf("Building %s", o.options.EntryDir)
+	opts := o.options
+	entries := make([]string, 0, 2)
 
-	entries := []string{
-		filepath.Join(o.options.ThemeDir, o.options.EntryDir, "index.css"),
-		filepath.Join(o.options.ThemeDir, o.options.EntryDir, "index.ts"),
+	style := filepath.Join(opts.ThemeDir, opts.AssetStyle)
+	if _, err := os.Stat(style); err == nil {
+		entries = append(entries, style)
+	}
+
+	script := filepath.Join(opts.ThemeDir, opts.AssetScript)
+	if _, err := os.Stat(script); err == nil {
+		entries = append(entries, script)
+	}
+
+	if len(entries) == 0 {
+		return nil
 	}
 
 	result := api.Build(api.BuildOptions{
@@ -68,22 +97,23 @@ func (o *One) Bundle(ctx context.Context) error {
 	for _, file := range result.OutputFiles {
 		path := filepath.Join("/", filepath.Base(file.Path))
 		if strings.HasSuffix(file.Path, ".css") {
-			o.site.Styles = append(o.site.Styles, path)
+			o.site.Style = path
 		}
 		if strings.HasSuffix(file.Path, ".js") {
-			o.site.Scripts = append(o.site.Scripts, path)
+			o.site.Script = path
 		}
 	}
 	return nil
 }
 
 func (o One) Generate(ctx context.Context) error {
-	err := filepath.WalkDir(o.options.SourceDir, func(path string, entry fs.DirEntry, err error) error {
+	opts := o.options
+	err := filepath.WalkDir(opts.SourceDir, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if entry.IsDir() {
-			outdir := strings.Replace(path, o.options.SourceDir, o.options.OutputDir, 1)
+			outdir := strings.Replace(path, opts.SourceDir, opts.OutputDir, 1)
 			return os.MkdirAll(outdir, 0744)
 		}
 		return o.generate(ctx, path, entry)
@@ -94,37 +124,51 @@ func (o One) Generate(ctx context.Context) error {
 	if err = o.generateList(ctx); err != nil {
 		return err
 	}
-	if len(o.options.RSSFeed) > 0 {
-		return o.generateRSSFeed(ctx)
+	return o.generateRSSFeed(ctx)
+}
+
+func toOutfile(path, src, dst string, fold bool) (string, error) {
+	ext := filepath.Ext(path)
+	noext := path[:len(path)-len(ext)]
+	if path == src {
+		// we are in single page mode
+		return filepath.Join(dst, "index.html"), nil
 	}
-	return nil
+	dir := strings.Replace(noext, src, dst, 1)
+	file := dir + ".html"
+	if fold {
+		if err := os.MkdirAll(dir, 0744); err != nil {
+			return "", err
+		}
+		file = filepath.Join(dir, "index.html")
+	}
+	return file, nil
 }
 
 func (o *One) generate(ctx context.Context, path string, entry fs.DirEntry) error {
-	log.Printf("Generating %s", path)
-
 	opts := o.options
 	name := entry.Name()
-	use := "post.html"
-	escape := includes(name, opts.Escape)
-	if escape {
-		use = strings.Replace(name, "md", "html", 1)
+	use := opts.TemplatePost
+	temp, ok := opts.Templates[name]
+	if ok {
+		use = temp.Name
 	}
-	layout := filepath.Join(opts.ThemeDir, "layout.html")
-	page := filepath.Join(opts.ThemeDir, "pages", use)
-	t, err := template.New("layout").Funcs(o.funcs).ParseFiles(layout, page)
-	if err != nil {
+
+	t := template.New("layout").Funcs(o.funcs)
+	layout := filepath.Join(opts.ThemeDir, opts.TemplateLayout)
+	page := filepath.Join(opts.ThemeDir, use)
+	files := []string{layout}
+	if _, err := os.Stat(page); err == nil {
+		files = append(files, page)
+	}
+
+	if _, err := t.ParseFiles(files...); err != nil {
 		return err
 	}
 
-	ext := filepath.Ext(path)
-	outdir := strings.Replace(path[:len(path)-len(ext)], opts.SourceDir, opts.OutputDir, 1)
-	outfile := outdir + ".html"
-	if !escape {
-		if err = os.MkdirAll(outdir, 0744); err != nil {
-			return err
-		}
-		outfile = filepath.Join(outdir, "index.html")
+	outfile, err := toOutfile(path, opts.SourceDir, opts.OutputDir, !ok || temp.Fold)
+	if err != nil {
+		return err
 	}
 
 	out, err := os.Create(outfile)
@@ -174,8 +218,11 @@ func (o One) generateList(ctx context.Context) error {
 	var post *Post // for xxx/index.md
 
 	opts := o.options
-	layout := filepath.Join(o.options.ThemeDir, "layout.html")
-	page := filepath.Join(o.options.ThemeDir, opts.TemplateDir, "list.html")
+	page := filepath.Join(o.options.ThemeDir, opts.TemplateList)
+	if _, err := os.Stat(page); err != nil {
+		return nil
+	}
+	layout := filepath.Join(o.options.ThemeDir, opts.TemplateLayout)
 	t, err := template.New("layout").Funcs(o.funcs).ParseFiles(layout, page)
 	if err != nil {
 		return err
@@ -186,7 +233,7 @@ func (o One) generateList(ctx context.Context) error {
 			// we don't need to generate a list page for where the home page is.
 			continue
 		}
-		outdir = strings.Replace(k, o.options.SourceDir, o.options.OutputDir, 1)
+		outdir = strings.Replace(k, opts.SourceDir, opts.OutputDir, 1)
 		out, err := os.Create(filepath.Join(outdir, "index.html"))
 		if err != nil {
 			return err
@@ -219,11 +266,16 @@ func (o One) generateList(ctx context.Context) error {
 }
 
 func (o *One) generateRSSFeed(ctx context.Context) error {
-	t, err := template.ParseFiles(filepath.Join(o.options.ThemeDir, o.options.RSSFeed))
+	opts := o.options
+	feed := filepath.Join(opts.ThemeDir, opts.TemplateFeed)
+	if _, err := os.Stat(feed); err != nil {
+		return nil
+	}
+	t, err := template.ParseFiles(feed)
 	if err != nil {
 		return err
 	}
-	w, err := os.Create(filepath.Join(o.options.OutputDir, o.options.RSSFeed))
+	w, err := os.Create(filepath.Join(o.options.OutputDir, o.options.TemplateFeed))
 	if err != nil {
 		return err
 	}
@@ -242,9 +294,16 @@ func (o One) partial(path string, args interface{}) template.HTML {
 
 func New(opts ...Option) *One {
 	options := Options{
-		Escape: []string{
-			"index.md",
-		},
+		Templates:      defaultTemplates,
+		SourceDir:      defaultSourceDir,
+		OutputDir:      defaultOutputDir,
+		ThemeDir:       defaultThemeDir,
+		TemplateFeed:   defaultTemplateFeed,
+		TemplateLayout: defaultTemplateLayout,
+		TemplatePost:   defaultTemplatePost,
+		TemplateList:   defaultTemplateList,
+		AssetStyle:     defaultAssetStyle,
+		AssetScript:    defaultAssetScript,
 	}
 	for _, o := range opts {
 		o(&options)
@@ -263,20 +322,11 @@ func New(opts ...Option) *One {
 	return o
 }
 
-func includes(s string, a []string) bool {
-	for _, v := range a {
-		if s == v {
-			return true
-		}
-	}
-	return false
-}
-
 type Metadata map[string]interface{}
 
 type Site struct {
-	Styles   []string `json:"styles"`
-	Scripts  []string `json:"scripts"`
+	Style    string   `json:"style"`
+	Script   string   `json:"script"`
 	Posts    []*Post  `json:"posts"`
 	Metadata Metadata `json:"metadata"` // extracted from config file like `one.yml`
 }
@@ -285,8 +335,8 @@ type Post struct {
 	Site     Site          `json:"site"`
 	Name     string        `json:"name"`
 	Path     string        `json:"path"`
-	HTML     template.HTML `json:"html"`
 	Markdown string        `json:"markdown"`
+	HTML     template.HTML `json:"html"`
 	Metadata Metadata      `json:"metadata"`
 	Size     int64         `json:"size"`
 }
@@ -297,14 +347,22 @@ type List struct {
 	Posts []*Post `json:"posts"`
 }
 
+type Template struct {
+	Name string
+	Fold bool
+}
+
 type Options struct {
-	SourceDir   string
-	ThemeDir    string
-	OutputDir   string
-	TemplateDir string   // e.g. pages
-	EntryDir    string   // e.g. lib
-	RSSFeed     string   // e.g. index.xml
-	Escape      []string // e.g. index.md
+	SourceDir      string
+	OutputDir      string
+	ThemeDir       string // relative to ThemeDir
+	TemplateFeed   string // relative to ThemeDir e.g. atom.xml
+	TemplateLayout string // relative to ThemeDir e.g. layout.html
+	TemplatePost   string // relative to ThemeDir e.g. post.html
+	TemplateList   string // relative to ThemeDir e.g. list.html
+	AssetStyle     string // relative to ThemeDir e.g. index.css
+	AssetScript    string // relative to ThemeDir e.g. index.js
+	Templates      map[string]Template
 }
 
 type Option func(*Options)
@@ -327,26 +385,32 @@ func WithOutputDir(path string) Option {
 	}
 }
 
-func WithEscape(names ...string) Option {
+func WithTemplateFeed(name string) Option {
 	return func(o *Options) {
-		o.Escape = names
+		o.TemplateFeed = name
 	}
 }
 
-func WithEntryDir(path string) Option {
+func WithTemplateLayout(name string) Option {
 	return func(o *Options) {
-		o.EntryDir = path
+		o.TemplateLayout = name
 	}
 }
 
-func WithTemplateDir(path string) Option {
+func WithTemplatePost(name string) Option {
 	return func(o *Options) {
-		o.TemplateDir = path
+		o.TemplatePost = name
 	}
 }
 
-func WithRSSFeed(name string) Option {
+func WithTemplateList(name string) Option {
 	return func(o *Options) {
-		o.RSSFeed = name
+		o.TemplateList = name
+	}
+}
+
+func WithTemplates(ts map[string]Template) Option {
+	return func(o *Options) {
+		o.Templates = ts
 	}
 }

@@ -1,8 +1,13 @@
 github.com/evanw/esbuild v0.17.12 h1:qSyUwavXGLlEb8B8FQQX4ZZkcF86d9c4X2P20paZKyo=
 github.com/evanw/esbuild v0.17.12/go.mod h1:iINY06rn799hi48UqEnaQvVfZWe6W9bET78LbvN8VWk=
-github.com/mivinci/cli v0.0.0-20230313171747-7e0affd332ce h1:kHtl8KQCtWTOnC8FHs20yr2Bj6/MecpQfW57SYjbecE=
-github.com/mivinci/cli v0.0.0-20230313171747-7e0affd332ce/go.mod h1:wSaLtjsFz3KXz/cGUjhuJsbpUnnypflDpRpNcVcF9zQ=
+github.com/mivinci/cli v0.0.0-20230323233852-05e3cf955070 h1:1CzxWYu3phPkWNJgoq1l+pnX6B50q8lEXEFCxh7BXjQ=
+github.com/mivinci/cli v0.0.0-20230323233852-05e3cf955070/go.mod h1:wSaLtjsFz3KXz/cGUjhuJsbpUnnypflDpRpNcVcF9zQ=
 github.com/russross/blackfriday/v2 v2.1.0 h1:JIOH55/0cWyOuilr9/qlrm0BSXldqnqwMsf35Ld67mk=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
-golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 h1:0A+M6Uqn+Eje4kHMK80dtF3JCXC4ykBgQG4Fe06QRhQ=
 golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.6.0 h1:MVltZSvRTcU2ljQOhs94SXPftV6DCNnZViHeQps87pQ=
+golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
+gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
+gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=

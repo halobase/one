@@ -1,0 +1,25 @@
+name: One Page
+banner: Hello.
+
+projects:
+  - name: libx
+    about: A low-level but convenient C library for network programming.
+    repo: https://github.com/mivinci/libx
+    tags:
+      - C
+      - network-programming
+
+  - name: hugo-theme-minima
+    about: A clean and minimal Hugo theme.
+    repo: https://github.com/mivinci/hugo-theme-minima
+    tags:
+      - Hugo
+      - blog
+
+  - name: xoolab/one
+    about: A hyrid customizable blog platform.
+    repo: https://github.com/xoolab/one
+    tags:
+      - Go
+      - blog-generator
+

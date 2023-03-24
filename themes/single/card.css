@@ -1,0 +1,29 @@
+.card {
+  padding: 1.5rem 2rem;
+  border-radius: 1.5rem;
+  border: #9ca3af 1px solid;
+}
+
+.card > div {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.card a,
+.card a:visited {
+  font-size: 1.75rem;
+  font-weight: 400;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.card a:hover {
+  text-decoration: underline;
+}
+
+.card > p {
+  font-size: 1.25rem;
+  margin-top: 1rem;
+  margin-bottom: 0;
+}
