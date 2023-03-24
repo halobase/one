@@ -30,18 +30,22 @@ a:visited {
 
 main {
   display: grid;
-  gap: 4rem;
+  gap: 2.5rem;
 }
 
 aside {
   display: flex;
   flex-direction: column;
   gap: 2rem;
-  margin-top: 5rem;
 }
 
 @media (min-width: 768px) {
   main {
     grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+  }
+
+  aside {
+    margin-top: 5rem;
   }
 }

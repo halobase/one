@@ -73,16 +73,26 @@ func (o *One) Bundle(ctx context.Context) error {
 		return nil
 	}
 
+	names := "[dir]/[name]"
+	if opts.Hash {
+		names += "-[hash]"
+	}
+
+	shaking := api.TreeShakingFalse
+	if opts.Treeshaking {
+		shaking = api.TreeShakingTrue
+	}
+
 	result := api.Build(api.BuildOptions{
 		EntryPoints:       entries,
-		EntryNames:        "[dir]/[name]-[hash]",
+		EntryNames:        names,
 		Outdir:            o.options.OutputDir,
 		Bundle:            true,
 		Write:             true,
-		MinifyWhitespace:  true,
-		MinifyIdentifiers: true,
-		MinifySyntax:      true,
-		TreeShaking:       api.TreeShakingTrue,
+		MinifyWhitespace:  opts.Minify,
+		MinifyIdentifiers: opts.Minify,
+		MinifySyntax:      opts.Minify,
+		TreeShaking:       shaking,
 		Loader: map[string]api.Loader{
 			".ttf": api.LoaderFile,
 			".png": api.LoaderBase64,
@@ -363,6 +373,9 @@ type Options struct {
 	AssetStyle     string // relative to ThemeDir e.g. index.css
 	AssetScript    string // relative to ThemeDir e.g. index.js
 	Templates      map[string]Template
+	Minify         bool
+	Treeshaking    bool
+	Hash           bool
 }
 
 type Option func(*Options)
@@ -412,5 +425,23 @@ func WithTemplateList(name string) Option {
 func WithTemplates(ts map[string]Template) Option {
 	return func(o *Options) {
 		o.Templates = ts
+	}
+}
+
+func WithMinify(enable bool) Option {
+	return func(o *Options) {
+		o.Minify = enable
+	}
+}
+
+func WithTreeShaking(enable bool) Option {
+	return func(o *Options) {
+		o.Minify = enable
+	}
+}
+
+func WithHash(enable bool) Option {
+	return func(o *Options) {
+		o.Hash = enable
 	}
 }

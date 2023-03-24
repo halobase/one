@@ -3,7 +3,6 @@ package main
 import (
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -32,7 +31,7 @@ var (
 		Name:    "one",
 		Usage:   banner,
 		Example: example,
-		Run:     run,
+		Run:     Gen,
 		Args:    []string{"path"},
 		Flags: []*cli.Flag{
 			{
@@ -58,38 +57,42 @@ var (
 				Usage: "force rewrite output",
 				Value: cli.Bool(false),
 			},
+			{
+				Name:  "disable-minify",
+				Usage: "disable minifying output files",
+				Value: cli.Bool(false),
+			},
+			{
+				Name:  "disable-hash",
+				Usage: "disable using hash output files names",
+				Value: cli.Bool(false),
+			},
+			{
+				Name:  "disable-treeshaking",
+				Usage: "disable purging used code",
+				Value: cli.Bool(false),
+			},
 		},
 	}
+
+	dev = cli.Command{
+		Name:  "dev",
+		Usage: "run in development mode",
+		Run:   Dev,
+		Flags: []*cli.Flag{},
+	}
+
 	serve = cli.Command{
 		Name:  "serve",
-		Usage: "serve a directory",
-		Run:   runServe,
-		Args:  []string{"path"},
-		Flags: []*cli.Flag{
-			{
-				Name:  "tls-cert",
-				Usage: "specify a TLS certificate",
-				Value: cli.String(""),
-			},
-			{
-				Name:  "tls-key",
-				Usage: "specify a TLS key",
-				Value: cli.String(""),
-			},
-			{
-				Name:  "addr",
-				Usage: "specify an address to serve on",
-				Value: cli.String(":8080"),
-			},
-		},
+		Usage: "run in production mode",
 	}
 )
 
 func init() {
-	cmd.Add(&serve)
+	cmd.Add(&dev, &serve)
 }
 
-func run(ctx *cli.Context) error {
+func Gen(ctx *cli.Context) error {
 	output := ctx.String("output")
 	force := ctx.Bool("force")
 	if _, err := os.Stat(output); err == nil {
@@ -112,6 +115,9 @@ func run(ctx *cli.Context) error {
 		one.WithSourceDir(ctx.Args()[0]),
 		one.WithThemeDir(theme),
 		one.WithOutputDir(output),
+		one.WithMinify(!ctx.Bool("disable-minify")),
+		one.WithHash(!ctx.Bool("disable-hash")),
+		one.WithTreeShaking(!ctx.Bool("disable-treeshaking")),
 	)
 
 	log.Printf("Building with %s ...", theme)
@@ -173,15 +179,8 @@ func openConfig(ctx *cli.Context) (io.ReadCloser, error) {
 	return os.Open(chosen)
 }
 
-func runServe(ctx *cli.Context) error {
-	addr := ctx.String("addr")
-	path := ctx.Args()[0]
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		return err
-	}
-	log.Printf("serving on %s", ln.Addr())
-	return http.Serve(ln, http.FileServer(http.Dir(path)))
+func Dev(ctx *cli.Context) error {
+	return nil
 }
 
 func main() {
